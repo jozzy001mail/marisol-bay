@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Marisol Bay — Open-World Crime</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0e1a24; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #app { position: fixed; inset: 0; }
+  #app canvas { display: block; }
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; display: none; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+  .top-left { position: absolute; top: 14px; left: 16px; font-size: 22px; font-weight: 700; }
+  .top-left small { display: block; font-size: 13px; font-weight: 400; opacity: .85; }
+  #stars { font-size: 26px; letter-spacing: 3px; }
+  .top-right { position: absolute; top: 14px; right: 16px; text-align: right; font-size: 18px; font-weight: 600; }
+  #minimap { position: absolute; top: 86px; right: 16px; width: 180px; height: 180px; border: 2px solid rgba(255,255,255,.6); border-radius: 6px; background: #1e2a24; }
+  .bottom-left { position: absolute; left: 16px; bottom: 16px; font-size: 15px; line-height: 1.5; }
+  .bottom-right { position: absolute; right: 16px; bottom: 16px; text-align: right; font-size: 15px; line-height: 1.5; }
+  #objective { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); max-width: 520px; text-align: center; background: rgba(0,0,0,.55); padding: 8px 16px; border-radius: 8px; font-size: 15px; border-left: 4px solid #ff5a9c; }
+  #mission-list { position: absolute; left: 16px; top: 110px; background: rgba(0,0,0,.45); padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.7; max-width: 260px; }
+  #mission-list .mission.done { color: #7ddb6a; }
+  #mission-list .mission.active { color: #ffe9a8; font-weight: 700; }
+  #message { position: absolute; left: 50%; bottom: 110px; transform: translateX(-50%); background: rgba(0,0,0,.65); padding: 10px 18px; border-radius: 8px; font-size: 16px; opacity: 0; transition: opacity .3s; max-width: 640px; text-align: center; }
+  #mute-btn { position: absolute; right: 16px; bottom: 280px; pointer-events: auto; background: rgba(0,0,0,.55); color: #fff; border: 1px solid rgba(255,255,255,.5); border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+  .screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; text-align: center; color: #fff; background: linear-gradient(180deg, rgba(10,30,50,.55), rgba(10,20,35,.85)); z-index: 10; }
+  .screen h1 { font-size: 64px; margin: 0; letter-spacing: 2px; color: #ffe9a8; text-shadow: 0 4px 24px rgba(0,0,0,.7); }
+  .screen h2 { font-size: 20px; font-weight: 400; margin: 8px 0 4px; color: #ffd23c; }
+  .screen p { max-width: 620px; line-height: 1.6; font-size: 16px; }
+  .screen .controls { background: rgba(0,0,0,.5); padding: 12px 20px; border-radius: 8px; font-size: 14px; line-height: 1.9; text-align: left; }
+  .screen button { pointer-events: auto; margin-top: 18px; font-size: 20px; padding: 12px 36px; border: none; border-radius: 8px; background: #ff5a3c; color: #fff; cursor: pointer; font-weight: 700; }
+  .screen button:hover { background: #ff7a5c; }
+  .screen button.secondary { background: #2f7fb8; font-size: 16px; padding: 10px 24px; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.min.js" } }
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="hud">
+  <div class="top-left"><span id="cash">$100</span> <span id="stars">☆☆☆☆☆</span><small id="car">On foot</small></div>
+  <div class="top-right"><span id="clock">09:00</span><br><span id="speed">0 km/h</span></div>
+  <canvas id="minimap" width="180" height="180"></canvas>
+  <div id="objective">Follow the pink beacon.</div>
+  <div id="mission-list"></div>
+  <div class="bottom-left"><span id="health">♥ 100</span><br><span id="car-health"></span><br><span id="stats"></span></div>
+  <div class="bottom-right">WASD drive / walk · E enter car<br>Click shoot · Space brake · Shift run<br>P pause · M mute</div>
+  <div id="message"></div>
+  <button id="mute-btn">🔊 Sound: On</button>
+</div>
+
+<div class="screen" id="start-screen" style="display:flex">
+  <h1>MARISOL BAY</h1>
+  <h2>An original open-world crime story — no city you have seen before.</h2>
+  <p>Rio washed up in Marisol Bay with $100 and a borrowed jacket. Mara Voss, the fixer who
+  runs the harbour, has work for him — courier jobs, getaways, timed deliveries. Take any car
+  you can find, dodge the patrols, and earn your way out.</p>
+  <div class="controls">
+    <b>Controls</b><br>
+    WASD — walk / drive &nbsp;·&nbsp; Mouse — look (click to lock)<br>
+    E — steal / enter / exit a car &nbsp;·&nbsp; Click — shoot<br>
+    Space — brake &nbsp;·&nbsp; Shift — run &nbsp;·&nbsp; P — pause &nbsp;·&nbsp; M — mute<br>
+    Stealing cars and hitting people raises your wanted stars. Lose the patrols to cool down.
+  </div>
+  <button id="start-btn">Start — New Game</button>
+  <button id="continue-btn" class="secondary">Continue</button>
+  <p style="font-size:13px;opacity:.8">Progress saves to this browser. All characters, places and vehicles are original fiction.</p>
+</div>
+
+<div class="screen" id="pause-screen">
+  <h1>PAUSED</h1>
+  <p>Marisol Bay waits for no one — except right now.</p>
+  <button id="resume-btn">Resume</button>
+  <button id="restart-btn" class="secondary">Back to Title</button>
+</div>
+
+<div class="screen" id="busted-screen">
+  <h1>BUSTED!</h1>
+  <p id="busted-text"></p>
+  <button id="busted-btn">Back to the Streets</button>
+</div>
+
+<p id="status" role="status" aria-live="polite"></p>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
